@@ -201,6 +201,14 @@ function getIncidentsForCity(city) {
   };
 }
 
+/* ─── Global State for Admin Incidents (Memory mock) ─── */
+let mockAdminIncidents = [
+  { id: 101, type: 'ACCIDENT', severity: 'High', description: 'Two cars collided on the main intersection, blocking traffic.', city: 'Hyderabad', status: 'pending', reported_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 102, type: 'ROAD_WORKS', severity: 'Medium', description: 'Pothole repair closing one lane.', city: 'Mumbai', status: 'pending', reported_at: new Date(Date.now() - 7200000).toISOString() },
+  { id: 103, type: 'HAZARD', severity: 'Major', description: 'Tree fell on the road due to heavy wind.', city: 'Bengaluru', status: 'verified', reported_at: new Date(Date.now() - 86400000).toISOString() },
+];
+let nextIncidentId = 104;
+
 /* ════════════════════════  PUBLIC API  ════════════════════════ */
 
 export const api = {
@@ -248,8 +256,25 @@ export const api = {
     return getIncidentsForCity(closest.name);
   },
 
-  /* ── Citizen Portal ── */
-  reportIncident: async () => ({ success: true, message: 'Incident reported successfully' }),
-  getAdminIncidents: async () => [],
-  verifyIncident: async () => ({ success: true }),
+  /* ── Citizen Portal & Admin ── */
+  reportIncident: async (data) => {
+    mockAdminIncidents.unshift({
+      id: nextIncidentId++,
+      type: data.type || 'UNKNOWN',
+      severity: data.severity || 'Medium',
+      description: data.description || '',
+      city: data.city || 'Unknown',
+      status: 'pending',
+      reported_at: new Date().toISOString(),
+      lat: data.lat,
+      lon: data.lon
+    });
+    return { success: true, message: 'Incident reported successfully' };
+  },
+  getAdminIncidents: async () => ({ incidents: [...mockAdminIncidents] }),
+  verifyIncident: async (id, status) => {
+    const inc = mockAdminIncidents.find(i => i.id === id);
+    if (inc) inc.status = status;
+    return { success: true };
+  },
 };
