@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { api, PRIORITY_COLOR } from '../services/api';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
 
 function StatCard({ label, value, sub, color, icon }) {
   return (
-    <div style={{
+    <motion.div variants={itemVariants} style={{
       background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
       padding: '20px 22px', position: 'relative', overflow: 'hidden',
     }}>
@@ -15,7 +26,7 @@ function StatCard({ label, value, sub, color, icon }) {
       <div style={{ fontSize: 26, fontWeight: 700, color, fontFamily: 'var(--font-display)', marginBottom: 4 }}>{value}</div>
       <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{label}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{sub}</div>}
-    </div>
+    </motion.div>
   );
 }
 
@@ -27,11 +38,15 @@ function CongestionBar({ label, score, color }) {
         <span style={{ color, fontWeight: 600 }}>{score}%</span>
       </div>
       <div style={{ height: 6, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', width: `${score}%`, borderRadius: 3,
-          background: `linear-gradient(90deg, ${color}88, ${color})`,
-          transition: 'width 1s ease',
-        }} />
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+          style={{
+            height: '100%', borderRadius: 3,
+            background: `linear-gradient(90deg, ${color}88, ${color})`,
+          }} 
+        />
       </div>
     </div>
   );
@@ -68,16 +83,16 @@ export default function Dashboard({ city }) {
   });
 
   return (
-    <div>
+    <motion.div variants={containerVariants} initial="hidden" animate="show">
       {/* Header */}
-      <div style={{ marginBottom: 28 }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <div style={{ width: 3, height: 28, background: 'var(--accent)', borderRadius: 2 }} />
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text)' }}>{city} Overview</h1>
           <span style={{ background: 'rgba(0,212,255,0.12)', color: 'var(--accent)', fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1px solid rgba(0,212,255,0.25)', fontWeight: 600 }}>LIVE</span>
         </div>
         <p style={{ color: 'var(--text3)', fontSize: 13, marginLeft: 15 }}>Traffic infrastructure analysis & planning dashboard</p>
-      </div>
+      </motion.div>
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
@@ -89,17 +104,17 @@ export default function Dashboard({ city }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
         {/* Top Hotspots */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
+        <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
           <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, marginBottom: 18, color: 'var(--text)' }}>Top Congestion Zones</h3>
           {hotspots.slice(0, 6).map((h) => {
             const color = h.congestion_score > 85 ? '#ef4444' : h.congestion_score > 70 ? '#f59e0b' : h.congestion_score > 55 ? '#3b82f6' : '#22c55e';
             return <CongestionBar key={h.name} label={h.name} score={h.congestion_score} color={color} />;
           })}
-        </div>
+        </motion.div>
 
         {/* Priority Breakdown + Quick Info */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
+          <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, marginBottom: 16, color: 'var(--text)' }}>Priority Distribution</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {Object.entries(priorityCounts).map(([p, c]) => (
@@ -109,9 +124,9 @@ export default function Dashboard({ city }) {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22, flex: 1 }}>
+          <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22, flex: 1 }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, marginBottom: 14, color: 'var(--text)' }}>Quick Insights</h3>
             {[
               { label: 'Peak Hours', value: stats?.peak_hour || '8:30–10:00 AM', icon: '🕗' },
@@ -124,12 +139,12 @@ export default function Dashboard({ city }) {
                 <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{item.value}</span>
               </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Hotspot Table */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
+      <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 22 }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, marginBottom: 18, color: 'var(--text)' }}>All Congestion Zones</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -165,7 +180,7 @@ export default function Dashboard({ city }) {
             })}
           </tbody>
         </table>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

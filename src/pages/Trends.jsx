@@ -1,5 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { api } from '../services/api';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
 
 const PERIODS = ['hourly', 'weekly', 'monthly'];
 
@@ -106,17 +117,17 @@ export default function Trends({ city }) {
   useChart(lineRef, lineChart);
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
+    <motion.div variants={containerVariants} initial="hidden" animate="show">
+      <motion.div variants={itemVariants} style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <div style={{ width: 3, height: 28, background: '#f59e0b', borderRadius: 2 }} />
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800 }}>Traffic Trends</h1>
         </div>
         <p style={{ color: 'var(--text3)', fontSize: 13, marginLeft: 15 }}>Historical congestion pattern analysis for {city}</p>
-      </div>
+      </motion.div>
 
       {/* Period toggle */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <motion.div variants={itemVariants} style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {PERIODS.map(p => (
           <button key={p} onClick={() => setPeriod(p)} style={{
             padding: '8px 20px', borderRadius: 8, border: '1px solid',
@@ -127,7 +138,7 @@ export default function Trends({ city }) {
             textTransform: 'capitalize',
           }}>{p}</button>
         ))}
-      </div>
+      </motion.div>
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
@@ -136,7 +147,7 @@ export default function Trends({ city }) {
       ) : (
         <>
           {/* Bar Chart */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 20 }}>
+          <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700 }}>Congestion Index</h3>
               <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
@@ -150,16 +161,16 @@ export default function Trends({ city }) {
             <div style={{ position: 'relative', height: 280 }}>
               <canvas ref={barRef} role="img" aria-label={`Congestion index ${period} chart for ${city}`} />
             </div>
-          </div>
+          </motion.div>
 
           {/* Line Chart (monthly only) */}
           {period === 'monthly' && (
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 20 }}>
+            <motion.div variants={itemVariants} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 20 }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Incidents & Delay Trends</h3>
               <div style={{ position: 'relative', height: 260 }}>
                 <canvas ref={lineRef} role="img" aria-label={`Incidents and delay monthly chart for ${city}`} />
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Summary Cards */}
@@ -170,14 +181,14 @@ export default function Trends({ city }) {
               { label: 'Average', value: `${Math.round(congestionValues.reduce((a, b) => a + b, 0) / congestionValues.length)}%`, color: '#f59e0b' },
               { label: 'Data Points', value: data.length, color: 'var(--accent)' },
             ].map((s, i) => (
-              <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
+              <motion.div variants={itemVariants} key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
                 <div style={{ fontSize: 22, fontWeight: 800, color: s.color, fontFamily: 'var(--font-display)' }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{s.label}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { api, PRIORITY_COLOR, PRIORITY_BG } from '../services/api';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
 
 function HotspotCard({ h, rank }) {
   const priority = h.congestion_score > 85 ? 'Critical' : h.congestion_score > 70 ? 'High' : h.congestion_score > 55 ? 'Medium' : 'Low';
@@ -7,7 +18,7 @@ function HotspotCard({ h, rank }) {
   const bg = PRIORITY_BG[priority];
 
   return (
-    <div style={{
+    <motion.div variants={itemVariants} style={{
       background: 'var(--surface)', border: `1px solid ${color}33`,
       borderRadius: 'var(--radius-lg)', padding: '20px 22px',
       display: 'grid', gridTemplateColumns: '40px 1fr auto', gap: 16, alignItems: 'start',
@@ -27,7 +38,12 @@ function HotspotCard({ h, rank }) {
         {/* Score bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1, height: 6, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${h.congestion_score}%`, background: `linear-gradient(90deg, ${color}77, ${color})`, borderRadius: 3 }} />
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${h.congestion_score}%` }}
+              transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+              style={{ height: '100%', background: `linear-gradient(90deg, ${color}77, ${color})`, borderRadius: 3 }} 
+            />
           </div>
           <span style={{ fontSize: 13, color, fontWeight: 700, minWidth: 36 }}>{h.congestion_score}</span>
         </div>
@@ -40,7 +56,7 @@ function HotspotCard({ h, rank }) {
           {h.lat?.toFixed(3)}°N<br />{h.lon?.toFixed(3)}°E
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -70,8 +86,8 @@ export default function Hotspots({ city }) {
   );
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
+    <motion.div variants={containerVariants} initial="hidden" animate="show">
+      <motion.div variants={itemVariants} style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
           <div style={{ width: 3, height: 28, background: '#ef4444', borderRadius: 2 }} />
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800 }}>Congestion Hotspots</h1>
@@ -79,10 +95,10 @@ export default function Hotspots({ city }) {
         <p style={{ color: 'var(--text3)', fontSize: 13, marginLeft: 15 }}>
           Recurring congestion zones identified through historical pattern analysis in {city}
         </p>
-      </div>
+      </motion.div>
 
       {/* Method explanation */}
-      <div style={{ background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+      <motion.div variants={itemVariants} style={{ background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
         <span style={{ fontSize: 20 }}>ℹ️</span>
         <div>
           <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, marginBottom: 3 }}>Detection Methodology</div>
@@ -90,10 +106,10 @@ export default function Hotspots({ city }) {
             Hotspots are identified by analyzing TomTom historical flow data + HERE incident reports. A location is flagged when congestion_score &gt; 50 occurs on &gt;12 days/month. Score = weighted average of speed ratio, jam factor, and incident frequency.
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Sort controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <motion.div variants={itemVariants} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>Sort by:</span>
         {[['score', 'Congestion Score'], ['frequency', 'Frequency'], ['name', 'Name']].map(([val, label]) => (
           <button key={val} onClick={() => setSort(val)} style={{
@@ -104,12 +120,12 @@ export default function Hotspots({ city }) {
             fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)',
           }}>{label}</button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Hotspot list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sorted.map((h, i) => <HotspotCard key={h.name} h={h} rank={i + 1} />)}
       </div>
-    </div>
+    </motion.div>
   );
 }
