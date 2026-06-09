@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { api, CITIES } from '../services/api';
 
@@ -15,18 +15,20 @@ export default function CitizenPortal({ city }) {
   });
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [submitting, setSubmitting] = useState(false);
-  const [gps, setGps] = useState({ lat: null, lon: null, error: null, loading: true });
   
-  const mapRef = useRef(null);
-  const leafletMap = useRef(null);
+  // No auto-loading on mount to prevent browser blocking.
+  const [gps, setGps] = useState({ lat: null, lon: null, error: null, loading: false });
+  
   const cityData = CITIES.find(c => c.name === city) || CITIES[0];
 
-  useEffect(() => {
+  const detectLocation = () => {
     if (!navigator.geolocation) {
       setGps({ lat: null, lon: null, error: 'Geolocation not supported by browser', loading: false });
       return;
     }
-
+    
+    setGps({ lat: null, lon: null, error: null, loading: true });
+    
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setGps({ 
@@ -41,53 +43,7 @@ export default function CitizenPortal({ city }) {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, []);
-
-  // Initialize mini-map
-  useEffect(() => {
-    if (!mapRef.current || leafletMap.current) return;
-    const L = window.L;
-    if (!L) return;
-
-    // Use GPS if found, else city center
-    const centerLat = gps.lat || cityData.lat;
-    const centerLon = gps.lon || cityData.lon;
-
-    leafletMap.current = L.map(mapRef.current, {
-      center: [centerLat, centerLon],
-      zoom: 14,
-      zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-    });
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap',
-    }).addTo(leafletMap.current);
-
-    // Fetch and plot recent incidents near this location
-    api.getIncidents(`${centerLon-0.1},${centerLat-0.1},${centerLon+0.1},${centerLat+0.1}`)
-      .then(r => {
-        r.incidents.forEach(inc => {
-          L.circleMarker([inc.lat, inc.lon], {
-            radius: 6, fillColor: '#ef4444', color: '#fff', weight: 2, fillOpacity: 0.9,
-          }).addTo(leafletMap.current);
-        });
-      });
-      
-  }, [gps.lat, cityData.lat, cityData.lon]);
-
-  // Update map pin when GPS is acquired
-  useEffect(() => {
-    const L = window.L;
-    if (L && leafletMap.current && gps.lat && gps.lon) {
-      leafletMap.current.setView([gps.lat, gps.lon], 15);
-      L.marker([gps.lat, gps.lon]).addTo(leafletMap.current)
-        .bindPopup("<b>Your Location</b>").openPopup();
-    }
-  }, [gps.lat, gps.lon]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -120,6 +76,9 @@ export default function CitizenPortal({ city }) {
       setSubmitting(false);
     }
   };
+
+  const mapLat = gps.lat || cityData.lat;
+  const mapLon = gps.lon || cityData.lon;
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -204,25 +163,37 @@ export default function CitizenPortal({ city }) {
         {/* Map Side */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Location Notice */}
-          <div style={{ padding: 16, background: gps.lat ? 'rgba(34,197,94,0.05)' : (gps.error ? 'rgba(245,158,11,0.05)' : 'rgba(0,212,255,0.05)'), borderRadius: 'var(--radius)', border: `1px dashed ${gps.lat ? 'rgba(34,197,94,0.3)' : (gps.error ? 'rgba(245,158,11,0.3)' : 'rgba(0,212,255,0.3)')}`, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ padding: 16, background: gps.lat ? 'rgba(34,197,94,0.05)' : (gps.error ? 'rgba(239,68,68,0.05)' : 'rgba(0,212,255,0.05)'), borderRadius: 'var(--radius)', border: `1px dashed ${gps.lat ? 'rgba(34,197,94,0.3)' : (gps.error ? 'rgba(239,68,68,0.3)' : 'rgba(0,212,255,0.3)')}`, display: 'flex', gap: 12, alignItems: 'center' }}>
             <span style={{ fontSize: 24 }}>{gps.lat ? '🎯' : (gps.loading ? '⏳' : '📍')}</span>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: gps.lat ? 'var(--success)' : (gps.error ? 'var(--warning)' : 'var(--accent)') }}>
-                {gps.loading ? 'Acquiring GPS Signal...' : (gps.lat ? 'Live GPS Location Locked' : 'Location Auto-Detected')}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: gps.lat ? 'var(--success)' : (gps.error ? 'var(--danger)' : 'var(--accent)') }}>
+                {gps.loading ? 'Acquiring GPS Signal...' : (gps.lat ? 'Live GPS Location Locked' : (gps.error ? 'Location Error: ' + gps.error : 'Manual Detection Required'))}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-                {gps.loading ? 'Requesting device location...' : (gps.lat ? `Accuracy guaranteed. Coordinates: ${gps.lat.toFixed(4)}, ${gps.lon.toFixed(4)}` : `GPS denied or failed. Falling back to generic coordinates for ${city}.`)}
+                {gps.loading ? 'Please allow location access when prompted...' : (gps.lat ? `Accuracy guaranteed. Coordinates: ${gps.lat.toFixed(4)}, ${gps.lon.toFixed(4)}` : `Click the button to grant location access and pinpoint your live location.`)}
               </div>
             </div>
+            {!gps.lat && !gps.loading && (
+              <button 
+                onClick={detectLocation}
+                style={{ padding: '8px 12px', background: 'var(--surface)', border: '1px solid var(--accent)', color: 'var(--accent)', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                Detect Location
+              </button>
+            )}
           </div>
 
-          {/* Mini Map */}
-          <div style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', position: 'relative' }}>
-            <div ref={mapRef} style={{ width: '100%', height: '100%', minHeight: 300 }} />
-            <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12, background: 'rgba(13,20,33,0.9)', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', zIndex: 1000 }}>
-              <div style={{ fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>Nearby Live Incidents</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>This map shows real-time incidents reported by other citizens near your location. Avoid these areas.</div>
-            </div>
+          {/* Google Maps Iframe */}
+          <div style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', minHeight: 300 }}>
+            <iframe
+              title="Location Map"
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              style={{ border: 0, minHeight: 400 }}
+              src={`https://maps.google.com/maps?q=${mapLat},${mapLon}&z=15&output=embed`}
+              allowFullScreen
+            ></iframe>
           </div>
         </div>
 
