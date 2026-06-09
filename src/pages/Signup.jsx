@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiArrowRight, FiAlertCircle, FiCheck, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { auth } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +19,7 @@ export default function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (!email || !password || !confirmPassword) {
       setError('Please complete all fields');
@@ -41,9 +43,12 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Automatically navigate to dashboard on success
-      navigate('/dashboard');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      setSuccess('Account created! Please check your email (including Spam folder) to verify your account.');
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
     } catch (err) {
       let msg = err.message;
       if (err.code === 'auth/email-already-in-use') msg = 'Email already in use. Please sign in.';
@@ -184,6 +189,20 @@ export default function Signup() {
             }}>
               <FiAlertCircle size={16} style={{ marginTop: 2, flexShrink: 0 }} />
               <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div style={{
+              padding: 12,
+              background: 'rgba(34, 197, 94, 0.1)',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              borderRadius: 8,
+              fontSize: 13,
+              color: '#22c55e',
+            }}>
+              <FiCheck size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              {success}
             </div>
           )}
 

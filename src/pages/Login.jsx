@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight, FiAlertCircle } from 'react-icons/fi';
 import TunnelBackground from '../components/TunnelBackground';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 export default function Login({ onLogin }) {
   const location = useLocation();
@@ -28,6 +28,13 @@ export default function Login({ onLogin }) {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        await signOut(auth);
+        setError('Please check your email and verify your account before logging in.');
+        return;
+      }
+
       // Firebase auth handles tokens, but we keep the onLogin interface for compatibility
       onLogin(userCredential.user.accessToken, 'citizen', email);
       navigate('/dashboard');
