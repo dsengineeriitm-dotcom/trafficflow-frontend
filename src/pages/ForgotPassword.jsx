@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiMail, FiLock, FiArrowRight, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
-import { api } from '../services/api';
+import { FiMail, FiArrowRight, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import TunnelBackground from '../components/TunnelBackground';
+import { auth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 export default function ForgotPassword() {
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password, 3: Success
+  const [step, setStep] = useState(1); // 1: Email, 2: Success
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState('');
-  const navigate = useNavigate();
 
   const handleRequestOTP = async (e) => {
     e.preventDefault();
@@ -23,28 +21,10 @@ export default function ForgotPassword() {
     }
     setLoading(true);
     try {
-      await api.forgotPassword(email);
+      await sendPasswordResetEmail(auth, email);
       setStep(2);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send OTP. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otp || !newPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-    setLoading(true);
-    try {
-      await api.resetPassword(email, otp, newPassword);
-      setStep(3);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Invalid OTP or failed to reset password.');
+      setError(err.message || 'Failed to send password reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -154,9 +134,8 @@ export default function ForgotPassword() {
             color: 'var(--text2)',
             fontSize: 15,
           }}>
-            {step === 1 && "Enter your email to receive a reset code"}
-            {step === 2 && "Enter the 6-digit code and your new password"}
-            {step === 3 && "Password updated successfully!"}
+            {step === 1 && "Enter your email to receive a reset link"}
+            {step === 2 && "Reset email sent successfully!"}
           </p>
         </div>
 
@@ -208,78 +187,24 @@ export default function ForgotPassword() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Sending...' : <>Send Reset Code <FiArrowRight size={16} /></>}
+              {loading ? 'Sending...' : <>Send Reset Link <FiArrowRight size={16} /></>}
             </button>
           </form>
         )}
 
         {step === 2 && (
-          <form onSubmit={handleResetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text2)' }}>6-Digit Reset Code</label>
-              <div style={{
-                position: 'relative', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                background: 'var(--surface)', border: `1px solid ${focusedField === 'otp' ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: 8, transition: 'all 0.2s',
-              }}>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  onFocus={() => setFocusedField('otp')}
-                  onBlur={() => setFocusedField('')}
-                  placeholder="000000"
-                  style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', fontSize: 14, letterSpacing: '2px', textAlign: 'center' }}
-                />
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text2)' }}>New Password</label>
-              <div style={{
-                position: 'relative', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
-                background: 'var(--surface)', border: `1px solid ${focusedField === 'password' ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: 8, transition: 'all 0.2s',
-              }}>
-                <FiLock size={18} style={{ color: 'var(--text3)' }} />
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField('')}
-                  placeholder="••••••••"
-                  style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', fontSize: 14 }}
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: 8, padding: '12px 16px', background: loading ? 'var(--text3)' : 'var(--accent)',
-                color: '#000', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? 'Resetting...' : <>Reset Password <FiArrowRight size={16} /></>}
-            </button>
-          </form>
-        )}
-
-        {step === 3 && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24, color: 'var(--accent)' }}>
               <FiCheckCircle size={64} />
             </div>
             <p style={{ color: 'var(--text2)', marginBottom: 24 }}>
-              Your password has been reset successfully. You can now log in with your new password.
+              We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and click the link to reset your password.
             </p>
             <Link to="/login" style={{
               display: 'inline-block', padding: '12px 24px', background: 'var(--accent)', color: '#000',
               borderRadius: 8, fontWeight: 700, textDecoration: 'none'
             }}>
-              Go to Login
+              Return to Login
             </Link>
           </div>
         )}

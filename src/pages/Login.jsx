@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight, FiAlertCircle } from 'react-icons/fi';
-import { api } from '../services/api';
 import TunnelBackground from '../components/TunnelBackground';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function Login({ onLogin }) {
   const location = useLocation();
@@ -26,11 +27,16 @@ export default function Login({ onLogin }) {
 
     setLoading(true);
     try {
-      const res = await api.login({ email, password });
-      onLogin(res.token, res.role, res.email);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // Firebase auth handles tokens, but we keep the onLogin interface for compatibility
+      onLogin(userCredential.user.accessToken, 'citizen', email);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid email or password');
+      let msg = err.message;
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = 'Invalid email or password';
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

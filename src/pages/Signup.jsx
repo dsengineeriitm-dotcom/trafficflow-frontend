@@ -1,36 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiMail, FiArrowRight, FiAlertCircle, FiCheck, FiClock, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
-import { api } from '../services/api';
+import { FiMail, FiArrowRight, FiAlertCircle, FiCheck, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { auth } from '../firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function Signup() {
-  const [step, setStep] = useState(1); // 1: email, 2: OTP verification
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [code, setCode] = useState('');
-  const role = 'citizen'; // All self-registered accounts are citizens
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
-
-  // Countdown timer for OTP resend
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     if (!email || !password || !confirmPassword) {
       setError('Please complete all fields');
@@ -54,59 +41,14 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      await api.signup({ email, password, role });
-      setStep(2);
-      setCountdown(60);
-      setSuccess('Account created. Enter the verification code sent to your email.');
+      await createUserWithEmailAndPassword(auth, email, password);
+      // Automatically navigate to dashboard on success
+      navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create account. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyAccount = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!code) {
-      setError('Please enter the verification code');
-      return;
-    }
-
-    if (code.length !== 6) {
-      setError('Verification code must be 6 digits');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await api.verify({ email, code });
-      navigate('/login', {
-        state: {
-          email,
-          message: 'Account verified. You can now sign in with your password.',
-        },
-      });
-    } catch (err) {
-      setError(err.response?.data?.error || 'Invalid verification code. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    if (countdown > 0) return;
-    setError('');
-    setSuccess('');
-    setLoading(true);
-    try {
-      await api.signup({ email, password, role });
-      setCountdown(60);
-      setSuccess('A new verification code has been sent to your email.');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to resend verification code. Please try again.');
+      let msg = err.message;
+      if (err.code === 'auth/email-already-in-use') msg = 'Email already in use. Please sign in.';
+      else if (err.code === 'auth/weak-password') msg = 'Password is too weak.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -222,11 +164,11 @@ export default function Signup() {
             color: 'var(--text2)',
             fontSize: 15,
           }}>
-            {step === 1 ? 'Create your account with email and password' : 'Enter the code we sent to your email'}
+            Create your account with email and password
           </p>
         </div>
 
-        <form onSubmit={step === 1 ? handleSignup : handleVerifyAccount} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Error Message */}
           {error && (
             <div style={{
@@ -245,318 +187,178 @@ export default function Signup() {
             </div>
           )}
 
-          {success && (
-            <div style={{
-              padding: 12,
-              background: 'rgba(34, 197, 94, 0.1)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-              borderRadius: 8,
+          {/* Email Input */}
+          <div>
+            <label style={{
+              display: 'block',
               fontSize: 13,
-              color: '#22c55e',
+              fontWeight: 600,
+              marginBottom: 8,
+              color: 'var(--text2)',
+            }}>Email Address</label>
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 14px',
+              background: 'var(--surface)',
+              border: `1px solid ${focusedField === 'email' ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 8,
+              transition: 'all 0.2s',
             }}>
-              {success}
+              <FiMail size={18} style={{ color: 'var(--text3)' }} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField('')}
+                placeholder="you@example.com"
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  fontSize: 14,
+                }}
+              />
             </div>
-          )}
+          </div>
 
-          {step === 1 ? (
-            <>
-
-              {/* Email Input */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: 'var(--text2)',
-                }}>Email Address</label>
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 14px',
-                  background: 'var(--surface)',
-                  border: `1px solid ${focusedField === 'email' ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: 8,
-                  transition: 'all 0.2s',
-                }}>
-                  <FiMail size={18} style={{ color: 'var(--text3)' }} />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField('')}
-                    placeholder="you@example.com"
-                    style={{
-                      flex: 1,
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text)',
-                      outline: 'none',
-                      fontSize: 14,
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: 'var(--text2)',
-                }}>Password</label>
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 14px',
-                  background: 'var(--surface)',
-                  border: `1px solid ${focusedField === 'password' ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: 8,
-                  transition: 'all 0.2s',
-                }}>
-                  <FiLock size={18} style={{ color: 'var(--text3)' }} />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField('')}
-                    placeholder="At least 8 characters"
-                    style={{
-                      flex: 1,
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text)',
-                      outline: 'none',
-                      fontSize: 14,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: 'var(--text2)',
-                }}>Confirm Password</label>
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '12px 14px',
-                  background: 'var(--surface)',
-                  border: `1px solid ${focusedField === 'confirmPassword' ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: 8,
-                  transition: 'all 0.2s',
-                }}>
-                  <FiLock size={18} style={{ color: 'var(--text3)' }} />
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    onFocus={() => setFocusedField('confirmPassword')}
-                    onBlur={() => setFocusedField('')}
-                    placeholder="Re-enter your password"
-                    style={{
-                      flex: 1,
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--text)',
-                      outline: 'none',
-                      fontSize: 14,
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit Button - Request OTP */}
-              <button
-                type="submit"
-                disabled={loading}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 8,
+              color: 'var(--text2)',
+            }}>Password</label>
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 14px',
+              background: 'var(--surface)',
+              border: `1px solid ${focusedField === 'password' ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 8,
+              transition: 'all 0.2s',
+            }}>
+              <FiLock size={18} style={{ color: 'var(--text3)' }} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField('')}
+                placeholder="At least 8 characters"
                 style={{
-                  marginTop: 8,
-                  padding: '12px 16px',
-                  background: loading ? 'var(--text3)' : 'var(--accent)',
-                  color: '#000',
+                  flex: 1,
+                  background: 'transparent',
                   border: 'none',
-                  borderRadius: 8,
-                  fontWeight: 700,
+                  color: 'var(--text)',
+                  outline: 'none',
                   fontSize: 14,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: loading ? 0.7 : 1,
                 }}
-              >
-                {loading ? 'Creating account...' : <>Create Account <FiArrowRight size={16} /></>}
-              </button>
-            </>
-          ) : (
-            <>
-              {/* OTP Info */}
-              <div style={{
-                padding: 12,
-                background: 'rgba(0, 212, 255, 0.1)',
-                border: '1px solid rgba(0, 212, 255, 0.3)',
-                borderRadius: 8,
-                fontSize: 13,
-                color: 'var(--accent)',
-              }}>
-                Verification code sent to <strong>{email}</strong>
-              </div>
-
-              {/* OTP Input */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: 'var(--text2)',
-                }}>Enter 6-digit Code</label>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength="6"
-                  placeholder="000000"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    background: 'var(--surface)',
-                    border: `1px solid ${focusedField === 'otp' ? 'var(--accent)' : 'var(--border)'}`,
-                    borderRadius: 8,
-                    color: 'var(--text)',
-                    fontSize: 24,
-                    letterSpacing: 8,
-                    textAlign: 'center',
-                    fontWeight: 600,
-                    outline: 'none',
-                    transition: 'all 0.2s',
-                  }}
-                  onFocus={() => setFocusedField('otp')}
-                  onBlur={() => setFocusedField('')}
-                />
-              </div>
-
-              {/* Resend OTP */}
-              <div style={{
-                textAlign: 'center',
-                fontSize: 13,
-                color: 'var(--text2)',
-              }}>
-                {countdown > 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <FiClock size={14} />
-                    Resend in {countdown}s
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResendCode}
-                    disabled={loading}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--accent)',
-                      fontWeight: 600,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Resend Code
-                  </button>
-                )}
-              </div>
-
-              {/* Submit Button - Verify OTP */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  marginTop: 8,
-                  padding: '12px 16px',
-                  background: loading ? 'var(--text3)' : 'var(--accent)',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: loading ? 0.7 : 1,
-                }}
-              >
-                {loading ? 'Verifying...' : <>Verify Account <FiArrowRight size={16} /></>}
-              </button>
-
-              {/* Back Button */}
+              />
               <button
                 type="button"
-                onClick={() => { setStep(1); setError(''); setSuccess(''); setCode(''); setCountdown(0); }}
+                onClick={() => setShowPassword(!showPassword)}
                 style={{
-                  padding: '12px 16px',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  fontWeight: 600,
-                  fontSize: 14,
+                  background: 'none',
+                  border: 'none',
                   cursor: 'pointer',
-                  transition: 'all 0.3s',
+                  color: 'var(--text3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                ← Change Email
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </button>
-            </>
-          )}
+            </div>
+          </div>
+
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 8,
+              color: 'var(--text2)',
+            }}>Confirm Password</label>
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '12px 14px',
+              background: 'var(--surface)',
+              border: `1px solid ${focusedField === 'confirmPassword' ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: 8,
+              transition: 'all 0.2s',
+            }}>
+              <FiLock size={18} style={{ color: 'var(--text3)' }} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={() => setFocusedField('confirmPassword')}
+                onBlur={() => setFocusedField('')}
+                placeholder="Re-enter your password"
+                style={{
+                  flex: 1,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  fontSize: 14,
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button - Request OTP */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              marginTop: 8,
+              padding: '12px 16px',
+              background: loading ? 'var(--text3)' : 'var(--accent)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? 'Creating account...' : <>Create Account <FiArrowRight size={16} /></>}
+          </button>
         </form>
 
         {/* Login Link */}

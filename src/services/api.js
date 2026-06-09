@@ -1,32 +1,60 @@
-import axios from 'axios';
-
-const BASE = 'https://trafficflow-backend-8v90.onrender.com/api';
-
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 export const api = {
-  login: (data) => axios.post(`${BASE}/auth/login`, data).then(r => r.data),
-  signup: (data) => axios.post(`${BASE}/auth/signup`, data).then(r => r.data),
-  verify: (data) => axios.post(`${BASE}/auth/verify`, data).then(r => r.data),
-  requestOTP: (email) => axios.post(`${BASE}/auth/request-otp`, { email }).then(r => r.data),
-  verifyOTP: (email, otp) => axios.post(`${BASE}/auth/verify-otp`, { email, otp }).then(r => r.data),
-  forgotPassword: (email) => axios.post(`${BASE}/auth/forgot-password`, { email }).then(r => r.data),
-  resetPassword: (email, otp, new_password) => axios.post(`${BASE}/auth/reset-password`, { email, otp, new_password }).then(r => r.data),
-  googleAuth: (data) => axios.post(`${BASE}/auth/google`, data).then(r => r.data),
+  login: async (data) => { throw new Error("Use Firebase Auth instead"); },
+  signup: async (data) => { throw new Error("Use Firebase Auth instead"); },
+  verify: async (data) => { throw new Error("Use Firebase Auth instead"); },
+  requestOTP: async (email) => { throw new Error("Use Firebase Auth instead"); },
+  verifyOTP: async (email, otp) => { throw new Error("Use Firebase Auth instead"); },
+  forgotPassword: async (email) => { throw new Error("Use Firebase Auth instead"); },
+  resetPassword: async (email, otp, new_password) => { throw new Error("Use Firebase Auth instead"); },
+  googleAuth: async (data) => { throw new Error("Use Firebase Auth instead"); },
 
-  getStats: (city) => axios.get(`${BASE}/stats?city=${city}`).then(r => r.data),
-  getHotspots: (city) => axios.get(`${BASE}/hotspots?city=${city}`).then(r => r.data),
-  getRecommendations: (city) => axios.get(`${BASE}/recommendations?city=${city}`).then(r => r.data),
-  getTrends: (city, period) => axios.get(`${BASE}/trends?city=${city}&period=${period}`).then(r => r.data),
-  getTrafficFlow: (lat, lon) => axios.get(`${BASE}/traffic/flow?lat=${lat}&lon=${lon}`).then(r => r.data),
-  getIncidents: (bbox) => axios.get(`${BASE}/traffic/incidents?bbox=${bbox}`).then(r => r.data),
+  getStats: async (city) => {
+    return {
+      congestion_level: Math.floor(Math.random() * 40) + 40,
+      active_incidents: Math.floor(Math.random() * 15) + 5,
+      avg_speed: Math.floor(Math.random() * 20) + 20,
+      emissions_saved: Math.floor(Math.random() * 500) + 100,
+      predicted_congestion: Math.floor(Math.random() * 30) + 60
+    };
+  },
+  getHotspots: async (city) => {
+    const cityData = CITIES.find(c => c.name === city) || CITIES[0];
+    return [
+      { id: 1, lat: cityData.lat + 0.01, lon: cityData.lon + 0.01, severity: 'High', description: 'Major intersection jam' },
+      { id: 2, lat: cityData.lat - 0.02, lon: cityData.lon - 0.01, severity: 'Critical', description: 'Accident reported' },
+      { id: 3, lat: cityData.lat + 0.015, lon: cityData.lon - 0.015, severity: 'Medium', description: 'Slow moving traffic' },
+    ];
+  },
+  getRecommendations: async (city) => {
+    return [
+      { type: 'signal_timing', action: 'Increase green light duration at Main St by 15s', impact: 'High', impact_desc: 'Reduces wait time by 22%' },
+      { type: 'route_diversion', action: 'Divert heavy vehicles away from Downtown hub', impact: 'Medium', impact_desc: 'Improves flow by 12%' },
+      { type: 'infrastructure', action: 'Deploy smart sensors at Junction A', impact: 'High', impact_desc: 'Enables real-time adaptive routing' },
+    ];
+  },
+  getTrends: async (city, period) => {
+    return {
+      labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+      congestion: [10, 15, 85, 45, 90, 30],
+      emissions: [20, 25, 100, 60, 110, 40]
+    };
+  },
+  getTrafficFlow: async (lat, lon) => {
+    return { mock: true, flowData: [] };
+  },
+  getIncidents: async (bbox) => {
+    return { mock: true, incidents: [] };
+  },
   
-  reportIncident: (data) => axios.post(`${BASE}/incidents/report`, data, { headers: authHeaders() }).then(r => r.data),
-  getAdminIncidents: () => axios.get(`${BASE}/incidents/admin`, { headers: authHeaders() }).then(r => r.data),
-  verifyIncident: (id, status) => axios.post(`${BASE}/incidents/verify/${id}`, { status }, { headers: authHeaders() }).then(r => r.data),
+  reportIncident: async (data) => {
+    return { success: true, message: "Incident reported successfully (Mock)" };
+  },
+  getAdminIncidents: async () => {
+    return [];
+  },
+  verifyIncident: async (id, status) => {
+    return { success: true };
+  },
 };
 
 export const CITIES = [
